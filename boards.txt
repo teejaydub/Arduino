@@ -918,6 +918,99 @@ huzzah.menu.UploadSpeed.921600=921600
 huzzah.menu.UploadSpeed.921600.upload.speed=921600
 
 ##############################################################
+bem.name=Store It Cold BEM with ESP-07S
+
+bem.upload.tool=esptool
+bem.upload.speed=256000
+bem.upload.resetmethod=nodemcu
+bem.upload.maximum_size=1044464
+bem.upload.maximum_data_size=81920
+bem.upload.wait_for_upload_port=true
+bem.serial.disableDTR=true
+bem.serial.disableRTS=true
+
+bem.build.mcu=esp8266
+bem.build.f_cpu=80000000L
+bem.build.board=ESP8266_ESP07
+bem.build.core=esp8266
+bem.build.variant=generic
+bem.build.flash_mode=qio
+bem.build.flash_size=4M
+bem.build.flash_freq=40
+bem.build.debug_port=
+bem.build.debug_level=
+
+bem.menu.CpuFrequency.80=80 MHz
+bem.menu.CpuFrequency.80.build.f_cpu=80000000L
+bem.menu.CpuFrequency.160=160 MHz
+bem.menu.CpuFrequency.160.build.f_cpu=160000000L
+
+bem.menu.UploadSpeed.256000=256000
+bem.menu.UploadSpeed.256000.upload.speed=256000
+bem.menu.UploadSpeed.115200=115200
+bem.menu.UploadSpeed.115200.upload.speed=115200
+bem.menu.UploadSpeed.57600=57600
+bem.menu.UploadSpeed.57600.upload.speed=57600
+bem.menu.UploadSpeed.9600=9600
+bem.menu.UploadSpeed.9600.upload.speed=9600
+
+bem.menu.FlashSize.4M1M=4M (1M SPIFFS)
+bem.menu.FlashSize.4M1M.build.flash_size=4M
+bem.menu.FlashSize.4M1M.build.flash_ld=eagle.flash.4m1m.ld
+bem.menu.FlashSize.4M1M.build.spiffs_start=0x300000
+bem.menu.FlashSize.4M1M.build.spiffs_end=0x3FB000
+bem.menu.FlashSize.4M1M.build.spiffs_blocksize=8192
+bem.menu.FlashSize.4M1M.build.spiffs_pagesize=256
+
+bem.menu.FlashSize.4M3M=4M (3M SPIFFS)
+bem.menu.FlashSize.4M3M.build.flash_size=4M
+bem.menu.FlashSize.4M3M.build.flash_ld=eagle.flash.4m.ld
+bem.menu.FlashSize.4M3M.build.spiffs_start=0x100000
+bem.menu.FlashSize.4M3M.build.spiffs_end=0x3FB000
+bem.menu.FlashSize.4M3M.build.spiffs_blocksize=8192
+bem.menu.FlashSize.4M3M.build.spiffs_pagesize=256
+
+bem.menu.Debug.Disabled=Disabled
+bem.menu.Debug.Disabled.build.debug_port=
+bem.menu.Debug.Serial=Serial
+bem.menu.Debug.Serial.build.debug_port=-DDEBUG_ESP_PORT=Serial
+bem.menu.Debug.Serial1=Serial1
+bem.menu.Debug.Serial1.build.debug_port=-DDEBUG_ESP_PORT=Serial1
+
+bem.menu.DebugLevel.None____=None
+bem.menu.DebugLevel.None____.build.debug_level=
+bem.menu.DebugLevel.Core____=Core
+bem.menu.DebugLevel.Core____.build.debug_level=-DDEBUG_ESP_CORE
+bem.menu.DebugLevel.SSL_____=Core + SSL
+bem.menu.DebugLevel.SSL_____.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_SSL
+bem.menu.DebugLevel.SSL_MEM_=Core + SSL + TLS Mem
+bem.menu.DebugLevel.SSL_MEM_.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_SSL -DDEBUG_TLS_MEM
+bem.menu.DebugLevel.WiFic___=Core + WiFi
+bem.menu.DebugLevel.WiFic___.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_WIFI
+bem.menu.DebugLevel.WiFi____=WiFi
+bem.menu.DebugLevel.WiFi____.build.debug_level=-DDEBUG_ESP_WIFI
+bem.menu.DebugLevel.HTTPClient=HTTPClient
+bem.menu.DebugLevel.HTTPClient.build.debug_level=-DDEBUG_ESP_HTTP_CLIENT
+bem.menu.DebugLevel.HTTPClient2=HTTPClient + SSL
+bem.menu.DebugLevel.HTTPClient2.build.debug_level=-DDEBUG_ESP_HTTP_CLIENT -DDEBUG_ESP_SSL
+bem.menu.DebugLevel.HTTPUpdate=HTTPUpdate
+bem.menu.DebugLevel.HTTPUpdate.build.debug_level=-DDEBUG_ESP_HTTP_UPDATE
+bem.menu.DebugLevel.HTTPUpdate2=HTTPClient + HTTPUpdate
+bem.menu.DebugLevel.HTTPUpdate2.build.debug_level=-DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_HTTP_UPDATE
+bem.menu.DebugLevel.HTTPUpdate3=HTTPClient + HTTPUpdate + Updater
+bem.menu.DebugLevel.HTTPUpdate3.build.debug_level=-DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_UPDATER
+bem.menu.DebugLevel.HTTPServer=HTTPServer
+bem.menu.DebugLevel.HTTPServer.build.debug_level=-DDEBUG_ESP_HTTP_SERVER
+bem.menu.DebugLevel.UPDATER=Updater
+bem.menu.DebugLevel.UPDATER.build.debug_level=-DDEBUG_ESP_UPDATER
+bem.menu.DebugLevel.OTA_____=OTA
+bem.menu.DebugLevel.OTA_____.build.debug_level=-DDEBUG_ESP_OTA
+bem.menu.DebugLevel.OTA2____=OTA + Updater
+bem.menu.DebugLevel.OTA2____.build.debug_level=-DDEBUG_ESP_OTA -DDEBUG_ESP_UPDATER
+bem.menu.DebugLevel.all_____=All
+bem.menu.DebugLevel.all_____.build.debug_level=-DDEBUG_ESP_CORE -DDEBUG_ESP_SSL -DDEBUG_ESP_WIFI -DDEBUG_ESP_HTTP_CLIENT -DDEBUG_ESP_HTTP_UPDATE -DDEBUG_ESP_HTTP_SERVER -DDEBUG_ESP_UPDATER -DDEBUG_ESP_OTA -DDEBUG_TLS_MEM
+
+##############################################################
 espresso_lite_v1.name=ESPresso Lite 1.0
 espresso_lite_v1.build.board=ESP8266_ESPRESSO_LITE_V1
 espresso_lite_v1.build.variant=espresso_lite_v1
