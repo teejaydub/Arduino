@@ -72,6 +72,18 @@ public:
         _rebootOnUpdate = reboot;
     }
 
+    // Setting this to nonzero (e.g., 80) and setting an HTTPS fingerprint allows "hybrid" mode:
+    // An initial HEAD is done using HTTPS to get the MD5 hash,
+    // and then the firmware is downloaded using HTTP to the same server via the hybridPort.
+    // This prevents man-in-the-middle attacks by tying image validation to the certificate, 
+    // without requiring the additional overhead and complexity of encryption on the image transfer.
+    // Note: If a hash is not returned by the server in response to the HTTPS HEAD request, then it's not checked,
+    // and this is no more secure than using straight HTTP for the download.
+    void hybridPort(uint8_t port)
+    {
+        _hybridPort = port;
+    }
+
     // This function is deprecated, use rebootOnUpdate and the next one instead
     t_httpUpdate_return update(const String& url, const String& currentVersion,
                                const String& httpsFingerprint, bool reboot) __attribute__((deprecated));
@@ -104,11 +116,15 @@ public:
     String getLastErrorString(void);
 
 protected:
-    t_httpUpdate_return handleUpdate(HTTPClient& http, const String& currentVersion, bool spiffs = false);
+    void setUpdateHeaders(HTTPClient& http, const String& currentVersion, bool spiffs);
+    t_httpUpdate_return handleUpdate(HTTPClient& http, const String& currentVersion, bool spiffs, 
+        const String& host, const String& url);
+    String insecureUrl(const String& uri);
     bool runUpdate(Stream& in, uint32_t size, String md5, int command = U_FLASH);
 
     int _lastError;
     bool _rebootOnUpdate = true;
+    uint8_t _hybridPort = 0;
 private:
     int _httpClientTimeout;
 };

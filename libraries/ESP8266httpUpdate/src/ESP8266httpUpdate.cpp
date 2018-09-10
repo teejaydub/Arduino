@@ -29,6 +29,8 @@
 extern "C" uint32_t _SPIFFS_start;
 extern "C" uint32_t _SPIFFS_end;
 
+static String emptyString;
+
 ESP8266HTTPUpdate::ESP8266HTTPUpdate(void)
         : _httpClientTimeout(8000)
 {
@@ -54,7 +56,7 @@ HTTPUpdateResult ESP8266HTTPUpdate::update(const String& url, const String& curr
 {
     HTTPClient http;
     http.begin(url);
-    return handleUpdate(http, currentVersion, false);
+    return handleUpdate(http, currentVersion, false, emptyString, url);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::update(const String& url, const String& currentVersion,
@@ -62,7 +64,7 @@ HTTPUpdateResult ESP8266HTTPUpdate::update(const String& url, const String& curr
 {
     HTTPClient http;
     http.begin(url, httpsFingerprint);
-    return handleUpdate(http, currentVersion, false);
+    return handleUpdate(http, currentVersion, false, emptyString, url);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::update(const String& url, const String& currentVersion,
@@ -70,28 +72,28 @@ HTTPUpdateResult ESP8266HTTPUpdate::update(const String& url, const String& curr
 {
     HTTPClient http;
     http.begin(url, httpsFingerprint);
-    return handleUpdate(http, currentVersion, false);
+    return handleUpdate(http, currentVersion, false, emptyString, url);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::updateSpiffs(const String& url, const String& currentVersion, const String& httpsFingerprint)
 {
     HTTPClient http;
     http.begin(url, httpsFingerprint);
-    return handleUpdate(http, currentVersion, true);
+    return handleUpdate(http, currentVersion, true, emptyString, url);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::updateSpiffs(const String& url, const String& currentVersion, const uint8_t httpsFingerprint[20])
 {
     HTTPClient http;
     http.begin(url, httpsFingerprint);
-    return handleUpdate(http, currentVersion, true);
+    return handleUpdate(http, currentVersion, true, emptyString, url);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::updateSpiffs(const String& url, const String& currentVersion)
 {
     HTTPClient http;
     http.begin(url);
-    return handleUpdate(http, currentVersion, true);
+    return handleUpdate(http, currentVersion, true, emptyString, url);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::update(const String& host, uint16_t port, const String& uri, const String& currentVersion,
@@ -111,7 +113,7 @@ HTTPUpdateResult ESP8266HTTPUpdate::update(const String& host, uint16_t port, co
 {
     HTTPClient http;
     http.begin(host, port, uri);
-    return handleUpdate(http, currentVersion, false);
+    return handleUpdate(http, currentVersion, false, host, uri);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::update(const String& host, uint16_t port, const String& url,
@@ -119,7 +121,7 @@ HTTPUpdateResult ESP8266HTTPUpdate::update(const String& host, uint16_t port, co
 {
     HTTPClient http;
     http.begin(host, port, url, httpsFingerprint);
-    return handleUpdate(http, currentVersion, false);
+    return handleUpdate(http, currentVersion, false, host, url);
 }
 
 HTTPUpdateResult ESP8266HTTPUpdate::update(const String& host, uint16_t port, const String& url,
@@ -127,7 +129,7 @@ HTTPUpdateResult ESP8266HTTPUpdate::update(const String& host, uint16_t port, co
 {
     HTTPClient http;
     http.begin(host, port, url, httpsFingerprint);
-    return handleUpdate(http, currentVersion, false);
+    return handleUpdate(http, currentVersion, false, host, url);
 }
 
 /**
@@ -185,18 +187,9 @@ String ESP8266HTTPUpdate::getLastErrorString(void)
     return String();
 }
 
-
-/**
- *
- * @param http HTTPClient *
- * @param currentVersion const char *
- * @return HTTPUpdateResult
- */
-HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String& currentVersion, bool spiffs)
+// Sets the custom headers for the the update endpoint into this http instance.
+void ESP8266HTTPUpdate::setUpdateHeaders(HTTPClient& http, const String& currentVersion, bool spiffs)
 {
-
-    HTTPUpdateResult ret = HTTP_UPDATE_FAILED;
-
     // use HTTP/1.0 for update since the update handler not support any transfer Encoding
     http.useHTTP10(true);
     http.setTimeout(_httpClientTimeout);
@@ -209,7 +202,7 @@ HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String&
     http.addHeader(F("x-ESP8266-chip-size"), String(ESP.getFlashChipRealSize()));
     http.addHeader(F("x-ESP8266-sdk-version"), ESP.getSdkVersion());
 
-    if(spiffs) {
+    if (spiffs) {
         http.addHeader(F("x-ESP8266-mode"), F("spiffs"));
     } else {
         http.addHeader(F("x-ESP8266-mode"), F("sketch"));
@@ -218,6 +211,20 @@ HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String&
     if(currentVersion && currentVersion[0] != 0x00) {
         http.addHeader(F("x-ESP8266-version"), currentVersion);
     }
+}
+
+/**
+ *
+ * @param http HTTPClient *
+ * @param currentVersion const char *
+ * @return HTTPUpdateResult
+ */
+HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String& currentVersion, bool spiffs, 
+    const String& host, const String& url)
+{
+    HTTPUpdateResult ret = HTTP_UPDATE_FAILED;
+
+    setUpdateHeaders(http, currentVersion, spiffs);
 
     const char * headerkeys[] = { "x-MD5" };
     size_t headerkeyssize = sizeof(headerkeys) / sizeof(char*);
@@ -225,9 +232,16 @@ HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String&
     // track these headers
     http.collectHeaders(headerkeys, headerkeyssize);
 
+    int code;
+    int len = 0;
+    String md5;
 
-    int code = http.GET();
-    int len = http.getSize();
+    if (_hybridPort) {
+        code = http.sendRequest("HEAD");
+    } else {
+        code = http.GET();
+        len = http.getSize();
+    }
 
     if(code <= 0) {
         DEBUG_HTTP_UPDATE("[httpUpdate] HTTP error: %s\n", http.errorToString(code).c_str());
@@ -236,14 +250,41 @@ HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String&
         return HTTP_UPDATE_FAILED;
     }
 
+    if (http.hasHeader("x-MD5")) {
+        md5 = http.header("x-MD5");
+    }
+
+    if (_hybridPort && code == HTTP_CODE_OK) {
+        // Start a new download, unencrypted.
+        http.end();
+        if (host.length()) {
+            DEBUG_HTTP_UPDATE("[httpUpdate] hybrid GET to host %s, port %d, url %s\n", host.c_str(), _hybridPort, url.c_str());
+            http.begin(host, _hybridPort, url);
+        } else {
+            String newUrl = insecureUrl(url);
+            DEBUG_HTTP_UPDATE("[httpUpdate] hybrid GET to url %s\n", newUrl.c_str());
+            http.begin(newUrl);
+        }
+
+        setUpdateHeaders(http, currentVersion, spiffs);
+        code = http.GET();
+        len = http.getSize();
+
+        if (code <= 0) {
+            DEBUG_HTTP_UPDATE("[httpUpdate] HTTP error on GET: %s\n", http.errorToString(code).c_str());
+            _lastError = code;
+            http.end();
+            return HTTP_UPDATE_FAILED;
+        }
+    }
 
     DEBUG_HTTP_UPDATE("[httpUpdate] Header read fin.\n");
     DEBUG_HTTP_UPDATE("[httpUpdate] Server header:\n");
     DEBUG_HTTP_UPDATE("[httpUpdate]  - code: %d\n", code);
     DEBUG_HTTP_UPDATE("[httpUpdate]  - len: %d\n", len);
 
-    if(http.hasHeader("x-MD5")) {
-        DEBUG_HTTP_UPDATE("[httpUpdate]  - MD5: %s\n", http.header("x-MD5").c_str());
+    if (md5.length()) {
+        DEBUG_HTTP_UPDATE("[httpUpdate]  - MD5: %s\n", md5.c_str());
     }
 
     DEBUG_HTTP_UPDATE("[httpUpdate] ESP8266 info:\n");
@@ -308,7 +349,6 @@ HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String&
                         _lastError = HTTP_UE_BIN_VERIFY_HEADER_FAILED;
                         http.end();
                         return HTTP_UPDATE_FAILED;
-
                     }
 
                     uint32_t bin_flash_size = ESP.magicFlashChipSize((buf[3] & 0xf0) >> 4);
@@ -322,7 +362,7 @@ HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String&
                     }
                 }
 
-                if(runUpdate(*tcp, len, http.header("x-MD5"), command)) {
+                if(runUpdate(*tcp, len, md5, command)) {
                     ret = HTTP_UPDATE_OK;
                     DEBUG_HTTP_UPDATE("[httpUpdate] Update ok\n");
                     http.end();
@@ -364,6 +404,51 @@ HTTPUpdateResult ESP8266HTTPUpdate::handleUpdate(HTTPClient& http, const String&
 
     http.end();
     return ret;
+}
+
+// Given an URL, return the insecure version of it, using the _hybridPort.
+// E.g., given "https://example.com:443/updates", return "http://example.com:80/updates".
+String ESP8266HTTPUpdate::insecureUrl(const String& uri)
+{
+    String result(uri);
+
+    // Taken from HTTPClient::beginInternal():
+
+    // Parse the protocol.
+    int index = result.indexOf(':');
+    String protocol;
+    if(index >= 0) {
+        protocol = result.substring(0, index);
+        result.remove(0, (index + 3)); // remove http:// or https://
+    }
+
+    // Parse the host.
+    index = result.indexOf('/');
+    String host = result.substring(0, index);
+    result.remove(0, index);
+
+    // Parse authorization.
+    index = host.indexOf('@');
+    String auth;
+    if (index >= 0) {
+        // auth info
+        auth = host.substring(0, index);
+        host.remove(0, index + 1); // remove auth part including @
+    }
+
+    // Parse port.
+    index = host.indexOf(':');
+    String port;
+    if (index >= 0) {
+        port = host.substring(index + 1);
+        host.remove(index);
+    }
+
+    result = ":" + String(_hybridPort) + result;
+    if (auth.length())
+        result = "@" + auth + result;
+    result = "http://" + host + result;
+    return result;
 }
 
 /**
